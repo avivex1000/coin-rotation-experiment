@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circle Rolling Experiment</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    padding: 12px 20px;
+    overflow: hidden;
+  }
+  h1 { font-size: 1.8rem; margin-bottom: 8px; color: #eee; }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 6px;
+  }
+  .controls label { font-size: 1.4rem; }
+  input[type="range"] { accent-color: #6c63ff; }
+  #posSlider { width: 700px; height: 8px; accent-color: #00e676; }
+  .info {
+    font-size: 1.1rem;
+    color: #aaa;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  canvas {
+    background: #16213e;
+    border-radius: 10px;
+    border: 1px solid #333;
+    width: 100%;
+    height: 100%;
+  }
+  .canvas-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+  }
+  #matchBtn {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    padding: 10px 22px;
+    font-size: 1rem;
+    font-weight: bold;
+    border: 2px solid #6c63ff;
+    border-radius: 10px;
+    background: transparent;
+    color: #6c63ff;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.15s;
+  }
+  #matchBtn:hover { background: rgba(108,99,255,0.1); }
+  #matchBtn.active {
+    background: #6c63ff;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+<h1>Circle Rolling: Curve vs Straight Line</h1>
+
+<div class="controls">
+  <label>Position along B</label>
+  <input type="range" id="posSlider" min="0" max="1000" step="1" value="0">
+</div>
+<div class="info" id="info"></div>
+
+<div class="canvas-wrap">
+  <canvas id="canvas"></canvas>
+  <button id="matchBtn">Match Rotation: Off</button>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const posSlider = document.getElementById('posSlider');
+const infoEl = document.getElementById('info');
+const matchBtn = document.getElementById('matchBtn');
+
+const radiusA = 80;
+const multiplier = 1;
+const radiusB = radiusA * multiplier;
+let progress = 0;
+let matchRotation = false;
+
+matchBtn.addEventListener('click', () => {
+  matchRotation = !matchRotation;
+  matchBtn.textContent = matchRotation ? 'Match Rotation: On' : 'Match Rotation: Off';
+  matchBtn.classList.toggle('active', matchRotation);
+  draw();
+});
+
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  draw();
+}
+
+function getLogicalSize() {
+  return { w: canvas.width / devicePixelRatio, h: canvas.height / devicePixelRatio };
+}
+
+resize();
+window.addEventListener('resize', resize);
+
+posSlider.addEventListener('input', () => {
+  progress = parseInt(posSlider.value) / 1000;
+  draw();
+});
+
+function updateInfo() {
+  const circumB = (2 * Math.PI * radiusB).toFixed(0);
+  infoEl.textContent = `Circle A radius: ${radiusA}  |  Circle B radius: ${radiusB}  |  Circumference B: ${circumB}`;
+}
+updateInfo();
+
+function drawCircle(cx, cy, r, stroke, lineWidth, fill) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+}
+
+function drawDot(cx, cy, r, color) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawRotatedLabel(cx, cy, angle, text, color, fontSize) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  ctx.fillStyle = color;
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 0, 0);
+  ctx.restore();
+}
+
+function drawMarker(cx, cy, r, rotAngle, color) {
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + r * Math.cos(rotAngle), cy + r * Math.sin(rotAngle));
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+}
+
+function computeTraceCircular(centerX, centerY, prog) {
+  const points = [];
+  const steps = Math.max(1, Math.floor(prog * 600));
+  for (let i = 0; i <= steps; i++) {
+    const p = i / 600;
+    if (p > prog) break;
+    const t = p * 2 * Math.PI;
+    const d = radiusB + radiusA;
+    const cx = centerX + d * Math.cos(t - Math.PI / 2);
+    const cy = centerY + d * Math.sin(t - Math.PI / 2);
+    const rot = t * (radiusB + radiusA) / radiusA;
+    points.push({
+      x: cx + radiusA * Math.cos(Math.PI / 2 + rot),
+      y: cy + radiusA * Math.sin(Math.PI / 2 + rot)
+    });
+  }
+  return points;
+}
+
+function computeTraceLinear(lineStartX, lineY, circumB, prog) {
+  const points = [];
+  const steps = Math.max(1, Math.floor(prog * 600));
+  for (let i = 0; i <= steps; i++) {
+    const p = i / 600;
+    if (p > prog) break;
+    const ld = p * circumB;
+    const cx = lineStartX + ld;
+    const cy = lineY - radiusA;
+    const rot = ld / radiusA;
+    points.push({
+      x: cx + radiusA * Math.cos(Math.PI / 2 + rot),
+      y: cy + radiusA * Math.sin(Math.PI / 2 + rot)
+    });
+  }
+  return points;
+}
+
+function drawTrace(points, color) {
+  if (points.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function drawRotationGauge(cx, cy, r, totalRad, selfRad, orbitalRad) {
+  const toDeg = (rad) => (rad * 180 / Math.PI);
+  const selfDeg = toDeg(selfRad);
+  const orbitalDeg = toDeg(orbitalRad);
+  const totalDeg = toDeg(totalRad);
+
+  // Gauge background
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 10;
+  ctx.stroke();
+
+  // Self-rotation arc (red)
+  if (selfRad > 0.001) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + (selfRad % (2 * Math.PI)));
+    ctx.strokeStyle = '#ff6b6b';
+    ctx.lineWidth = 10;
+    ctx.stroke();
+  }
+
+  // Orbital rotation arc (cyan) on outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 14, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(108,99,255,0.08)';
+  ctx.lineWidth = 7;
+  ctx.stroke();
+
+  if (orbitalRad > 0.001) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 14, -Math.PI / 2, -Math.PI / 2 + (orbitalRad % (2 * Math.PI)));
+    ctx.strokeStyle = '#6c63ff';
+    ctx.lineWidth = 7;
+    ctx.stroke();
+  }
+
+  // Full rotation count in center with decimal
+  const exactRotations = totalRad / (2 * Math.PI);
+  const wholeStr = Math.floor(exactRotations).toString();
+  const decStr = '.' + (exactRotations % 1).toFixed(2).substring(2);
+
+  const bigSize = Math.round(r * 0.55);
+  const smallSize = Math.round(r * 0.35);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${bigSize}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const wholeW = ctx.measureText(wholeStr).width;
+  ctx.font = `${smallSize}px sans-serif`;
+  const decW = ctx.measureText(decStr).width;
+  const totalTextW = wholeW + decW;
+  const startX = cx - totalTextW / 2;
+
+  ctx.font = `bold ${bigSize}px sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText(wholeStr, startX, cy - 4);
+  ctx.font = `${smallSize}px sans-serif`;
+  ctx.fillStyle = '#aaa';
+  ctx.fillText(decStr, startX + wholeW, cy - 4);
+
+  ctx.fillStyle = '#888';
+  ctx.font = `${Math.round(r * 0.25)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('rotations', cx, cy + r * 0.3);
+
+  // Needle
+  const needleAngle = -Math.PI / 2 + (totalRad % (2 * Math.PI));
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + (r - 6) * Math.cos(needleAngle), cy + (r - 6) * Math.sin(needleAngle));
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  drawDot(cx + (r - 6) * Math.cos(needleAngle), cy + (r - 6) * Math.sin(needleAngle), 3, '#fff');
+
+  // Formula text below gauge
+  const textY = cy + r + 30;
+  const fontSize = Math.max(13, Math.round(r * 0.32));
+  ctx.font = `${fontSize}px sans-serif`;
+  ctx.textBaseline = 'top';
+
+  // Measure to lay out dynamically
+  const selfStr = `${selfDeg.toFixed(0)}°`;
+  const orbStr = orbitalRad > 0.001 ? `${orbitalDeg.toFixed(0)}°` : '0°';
+  const totalStr = `${totalDeg.toFixed(0)}°`;
+
+  const gap = fontSize * 0.5;
+  const selfW = ctx.measureText(selfStr).width;
+  const plusW = ctx.measureText(' + ').width;
+  const orbW = ctx.measureText(orbStr).width;
+  const eqW = ctx.measureText(' = ').width;
+  const totalW = ctx.measureText(totalStr).width;
+  const fullW = selfW + plusW + orbW + eqW + totalW;
+  let tx = cx - fullW / 2;
+
+  ctx.fillStyle = '#ff6b6b';
+  ctx.textAlign = 'left';
+  ctx.fillText(selfStr, tx, textY);
+  tx += selfW;
+
+  ctx.fillStyle = '#aaa';
+  ctx.fillText(' + ', tx, textY);
+  tx += plusW;
+
+  ctx.fillStyle = '#6c63ff';
+  ctx.fillText(orbStr, tx, textY);
+  tx += orbW;
+
+  ctx.fillStyle = '#aaa';
+  ctx.fillText(' = ', tx, textY);
+  tx += eqW;
+
+  ctx.fillStyle = '#ff6b6b';
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  ctx.fillText(totalStr, tx, textY);
+
+  // Sub-labels
+  const labelY = textY + fontSize + 4;
+  const labelSize = Math.max(10, Math.round(fontSize * 0.7));
+  ctx.font = `${labelSize}px sans-serif`;
+  ctx.textAlign = 'center';
+
+  // Recalculate positions for centered labels
+  const selfCenter = cx - fullW / 2 + selfW / 2;
+  const orbCenter = cx - fullW / 2 + selfW + plusW + orbW / 2;
+  const totalCenter = cx - fullW / 2 + selfW + plusW + orbW + eqW + totalW / 2;
+
+  ctx.fillStyle = '#ff6b6b';
+  ctx.fillText('A', selfCenter, labelY);
+  ctx.fillStyle = '#6c63ff';
+  ctx.fillText('B', orbCenter, labelY);
+  ctx.fillStyle = '#ff6b6b';
+  ctx.fillText("A'", totalCenter, labelY);
+}
+
+function draw() {
+  const { w: W, h: H } = getLogicalSize();
+  ctx.clearRect(0, 0, W, H);
+
+  const halfW = W / 2;
+  const animH = H * 0.55;   // top portion for animations
+  const gaugeH = H * 0.45;  // bottom portion for gauges
+
+  // ========== LEFT: Circle A rolling around Circle B ==========
+  ctx.save();
+
+  const leftCX = halfW / 2;
+  const leftCY = animH * 0.5;
+
+  ctx.fillStyle = '#888';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Rolling around circle B', leftCX, 18);
+
+  drawCircle(leftCX, leftCY, radiusB, '#6c63ff', 2, 'rgba(108,99,255,0.08)');
+
+  const theta = progress * 2 * Math.PI;
+
+  // Highlighted arc on B
+  if (theta > 0.001) {
+    ctx.beginPath();
+    ctx.arc(leftCX, leftCY, radiusB, -Math.PI / 2, -Math.PI / 2 + theta);
+    ctx.strokeStyle = '#00e676';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
+
+  const dist = radiusB + radiusA;
+  const aCenterX = leftCX + dist * Math.cos(theta - Math.PI / 2);
+  const aCenterY = leftCY + dist * Math.sin(theta - Math.PI / 2);
+
+  // Contact point
+  const contactX = leftCX + radiusB * Math.cos(theta - Math.PI / 2);
+  const contactY = leftCY + radiusB * Math.sin(theta - Math.PI / 2);
+
+  // Tangent line at contact
+  const circumB_val = 2 * Math.PI * radiusB;
+  const tangentDirX = -Math.sin(theta - Math.PI / 2);
+  const tangentDirY = Math.cos(theta - Math.PI / 2);
+  const halfLen = circumB_val / 2;
+
+  const tLineX1 = contactX - tangentDirX * halfLen;
+  const tLineY1 = contactY - tangentDirY * halfLen;
+  const tLineX2 = contactX + tangentDirX * halfLen;
+  const tLineY2 = contactY + tangentDirY * halfLen;
+
+  ctx.beginPath();
+  ctx.moveTo(tLineX1, tLineY1);
+  ctx.lineTo(tLineX2, tLineY2);
+  ctx.strokeStyle = 'rgba(108,99,255,0.3)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  const coloredLen = progress * circumB_val;
+  if (coloredLen > 0.5) {
+    ctx.beginPath();
+    ctx.moveTo(tLineX1, tLineY1);
+    ctx.lineTo(tLineX1 + tangentDirX * coloredLen, tLineY1 + tangentDirY * coloredLen);
+    ctx.strokeStyle = '#00e676';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
+
+  const aRotation = theta * (radiusB + radiusA) / radiusA;
+
+  const tracePointX = aCenterX + radiusA * Math.cos(Math.PI / 2 + aRotation);
+  const tracePointY = aCenterY + radiusA * Math.sin(Math.PI / 2 + aRotation);
+
+  const traceTop = computeTraceCircular(leftCX, leftCY, progress);
+  drawTrace(traceTop, 'rgba(255,107,107,0.7)');
+
+  drawCircle(aCenterX, aCenterY, radiusA, '#ff6b6b', 2, 'rgba(255,107,107,0.12)');
+  drawMarker(aCenterX, aCenterY, radiusA, Math.PI / 2 + aRotation, '#ff6b6b');
+
+  // Highlight the arc on circle A that has been in contact
+  const selfRotA = theta * radiusB / radiusA;
+  if (selfRotA > 0.001) {
+    const contactAngle = Math.PI / 2 + aRotation;
+    ctx.beginPath();
+    ctx.arc(aCenterX, aCenterY, radiusA, contactAngle - selfRotA, contactAngle);
+    ctx.strokeStyle = '#00e676';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
+
+  drawDot(tracePointX, tracePointY, 4, '#ff6b6b');
+  drawDot(leftCX, leftCY, 3, '#6c63ff');
+  drawDot(contactX, contactY, 4, '#00e676');
+
+  // Label "B" on circle B (stationary, no rotation)
+  drawRotatedLabel(leftCX, leftCY, 0, 'B', 'rgba(108,99,255,0.6)', Math.round(radiusB * 0.5));
+  // Label "A" on circle A (rotates with A, starts upright)
+  drawRotatedLabel(aCenterX, aCenterY, aRotation, 'A', 'rgba(255,107,107,0.6)', Math.round(radiusA * 0.5));
+  // Label "B" at the right end of the tangent plain (rotates with it)
+  const bLabelSize = Math.round(radiusA * 0.35);
+  const tangentAngle = Math.atan2(tangentDirY, tangentDirX);
+  ctx.save();
+  ctx.translate(tLineX2, tLineY2);
+  ctx.rotate(tangentAngle);
+  ctx.fillStyle = 'rgba(108,99,255,0.8)';
+  ctx.font = `bold ${bLabelSize}px sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('B', 4, -4);
+  ctx.restore();
+
+  // Left gauge
+  const selfRotTop = theta * radiusB / radiusA;
+  const orbitalRotTop = theta;
+  const totalRotTop = selfRotTop + orbitalRotTop;
+  const gaugeR = Math.min(75, gaugeH * 0.30);
+  const gaugeLY = animH + gaugeH * 0.35;
+
+  drawRotationGauge(leftCX, gaugeLY, gaugeR, totalRotTop, selfRotTop, orbitalRotTop);
+
+  ctx.restore();
+
+  // ========== VERTICAL DIVIDER ==========
+  ctx.beginPath();
+  ctx.setLineDash([5, 5]);
+  ctx.moveTo(halfW, 10);
+  ctx.lineTo(halfW, H - 10);
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ========== RIGHT: Circle A rolling on straight line ==========
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(halfW + 1, 0, halfW - 1, animH);
+  ctx.clip();
+
+  const rightCX = halfW + halfW / 2;
+  const circumB = 2 * Math.PI * radiusB;
+
+  // The line and circle are centered in the right half
+  const lineY = animH * 0.55;
+  const lineStartX = rightCX - circumB / 2;
+  const lineEndX = rightCX + circumB / 2;
+  const linearDist = progress * circumB;
+
+  ctx.fillStyle = '#888';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(matchRotation ? 'Rolling along straight line (matching B rotation)' : 'Rolling along straight line (circumference of B)', rightCX, 18);
+
+  // When matching rotation, rotate the entire scene around the center of the line
+  if (matchRotation) {
+    ctx.translate(rightCX, lineY);
+    ctx.rotate(theta);
+    ctx.translate(-rightCX, -lineY);
+  }
+
+  // Pivot dot when rotation is on
+  if (matchRotation) {
+    drawDot(rightCX, lineY, 5, '#6c63ff');
+  }
+
+  // Draw the line
+  ctx.beginPath();
+  ctx.moveTo(lineStartX, lineY);
+  ctx.lineTo(lineEndX, lineY);
+  ctx.strokeStyle = '#6c63ff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Highlighted portion
+  if (linearDist > 0.5) {
+    ctx.beginPath();
+    ctx.moveTo(lineStartX, lineY);
+    ctx.lineTo(lineStartX + linearDist, lineY);
+    ctx.strokeStyle = '#00e676';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
+
+  // Tick marks
+  for (let i = 0; i <= multiplier; i++) {
+    const tx = lineStartX + (i / multiplier) * circumB;
+    ctx.beginPath();
+    ctx.moveTo(tx, lineY - 6);
+    ctx.lineTo(tx, lineY + 6);
+    ctx.strokeStyle = '#6c63ff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Circle A on line
+  const aLinearCX = lineStartX + linearDist;
+  const aLinearCY = lineY - radiusA;
+  const aLinearRot = linearDist / radiusA;
+
+  const traceBX = aLinearCX + radiusA * Math.cos(Math.PI / 2 + aLinearRot);
+  const traceBY = aLinearCY + radiusA * Math.sin(Math.PI / 2 + aLinearRot);
+
+  const traceBottom = computeTraceLinear(lineStartX, lineY, circumB, progress);
+  drawTrace(traceBottom, 'rgba(255,107,107,0.7)');
+
+  drawCircle(aLinearCX, aLinearCY, radiusA, '#ff6b6b', 2, 'rgba(255,107,107,0.12)');
+  drawMarker(aLinearCX, aLinearCY, radiusA, Math.PI / 2 + aLinearRot, '#ff6b6b');
+
+  // Highlight the arc on circle A that has been in contact
+  if (aLinearRot > 0.001) {
+    const contactAngleL = Math.PI / 2 + aLinearRot;
+    ctx.beginPath();
+    ctx.arc(aLinearCX, aLinearCY, radiusA, contactAngleL - aLinearRot, contactAngleL);
+    ctx.strokeStyle = '#00e676';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
+
+  drawDot(traceBX, traceBY, 4, '#ff6b6b');
+
+  // Label "A" on circle A (rotates with A, starts upright)
+  drawRotatedLabel(aLinearCX, aLinearCY, aLinearRot, 'A', 'rgba(255,107,107,0.6)', Math.round(radiusA * 0.5));
+  // Label "B" at the right end of the plain line
+  ctx.fillStyle = 'rgba(108,99,255,0.8)';
+  ctx.font = `bold ${Math.round(radiusA * 0.35)}px sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('B', lineEndX + 4, lineY - 4);
+
+  ctx.restore();
+
+  // Right gauge (drawn outside the rotated/clipped context)
+  ctx.save();
+  const selfRotBottom = aLinearRot;
+  const orbitalRotBottom = matchRotation ? theta : 0;
+  const totalRotBottom = selfRotBottom + orbitalRotBottom;
+  const gaugeRY = animH + gaugeH * 0.35;
+
+  drawRotationGauge(rightCX, gaugeRY, gaugeR, totalRotBottom, selfRotBottom, orbitalRotBottom);
+  ctx.restore();
+
+  // ========== HORIZONTAL DIVIDER ==========
+  ctx.beginPath();
+  ctx.setLineDash([5, 5]);
+  ctx.moveTo(10, animH);
+  ctx.lineTo(W - 10, animH);
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+draw();
+</script>
+</body>
+</html>
