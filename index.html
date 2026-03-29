@@ -639,30 +639,91 @@ function draw() {
   ctx.setLineDash([]);
 }
 
+function drawMobileEquation(cx, y, selfRad, orbitalRad, totalRad) {
+  const toDeg = (rad) => (rad * 180 / Math.PI);
+  const selfDeg = toDeg(selfRad);
+  const orbitalDeg = toDeg(orbitalRad);
+  const totalDeg = toDeg(totalRad);
+
+  const selfStr = `${selfDeg.toFixed(0)}°`;
+  const orbStr = orbitalRad > 0.001 ? `${orbitalDeg.toFixed(0)}°` : '0°';
+  const totalStr = `${totalDeg.toFixed(0)}°`;
+
+  const fontSize = 13;
+  ctx.font = `${fontSize}px sans-serif`;
+  ctx.textBaseline = 'top';
+
+  const selfW = ctx.measureText(selfStr).width;
+  const plusW = ctx.measureText(' + ').width;
+  const orbW = ctx.measureText(orbStr).width;
+  const eqW = ctx.measureText(' = ').width;
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  const totalW = ctx.measureText(totalStr).width;
+  const fullW = selfW + plusW + orbW + eqW + totalW;
+  let tx = cx - fullW / 2;
+
+  ctx.font = `${fontSize}px sans-serif`;
+  ctx.textAlign = 'left';
+
+  ctx.fillStyle = '#ff6b6b';
+  ctx.fillText(selfStr, tx, y);
+  tx += selfW;
+
+  ctx.fillStyle = '#aaa';
+  ctx.fillText(' + ', tx, y);
+  tx += plusW;
+
+  ctx.fillStyle = '#6c63ff';
+  ctx.fillText(orbStr, tx, y);
+  tx += orbW;
+
+  ctx.fillStyle = '#aaa';
+  ctx.fillText(' = ', tx, y);
+  tx += eqW;
+
+  ctx.fillStyle = '#ff6b6b';
+  ctx.font = `bold ${fontSize}px sans-serif`;
+  ctx.fillText(totalStr, tx, y);
+
+  // Sub-labels
+  const labelY = y + fontSize + 2;
+  const labelSize = 10;
+  ctx.font = `${labelSize}px sans-serif`;
+  ctx.textAlign = 'center';
+
+  const selfCenter = cx - fullW / 2 + selfW / 2;
+  const orbCenter = cx - fullW / 2 + selfW + plusW + orbW / 2;
+  const totalCenter = cx - fullW / 2 + selfW + plusW + orbW + eqW + totalW / 2;
+
+  ctx.fillStyle = '#ff6b6b';
+  ctx.fillText('A', selfCenter, labelY);
+  ctx.fillStyle = '#6c63ff';
+  ctx.fillText('B', orbCenter, labelY);
+  ctx.fillStyle = '#ff6b6b';
+  ctx.fillText("A'", totalCenter, labelY);
+}
+
 function drawMobile(W, H) {
-  // Divide canvas into 4 vertical sections: anim1, gauge1, anim2, gauge2
-  const sectionH = H / 4;
-  const sec1Y = 0;                // animation 1 (circular)
-  const sec2Y = sectionH;         // gauge 1
-  const sec3Y = sectionH * 2;     // animation 2 (linear)
-  const sec4Y = sectionH * 3;     // gauge 2
+  // Two panels stacked vertically, each with animation centered + equation below
+  const panelH = H / 2;
+  const animH = panelH - 30;  // leave 30px at bottom for equation
   const cx = W / 2;
 
   const theta = progress * 2 * Math.PI;
   const circumB = 2 * Math.PI * radiusB;
 
-  // ========== SECTION 1: Circle A rolling around Circle B ==========
+  // ========== TOP PANEL: Circle A rolling around Circle B ==========
   ctx.save();
   ctx.beginPath();
-  ctx.rect(0, sec1Y, W, sectionH);
+  ctx.rect(0, 0, W, panelH);
   ctx.clip();
 
-  const topCY = sec1Y + sectionH * 0.5;
+  const topCY = animH * 0.5;
 
   ctx.fillStyle = '#888';
   ctx.font = '11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Rolling around circle B', cx, sec1Y + 13);
+  ctx.fillText('Rolling around circle B', cx, 13);
 
   drawCircle(cx, topCY, radiusB, '#6c63ff', 1.5, 'rgba(108,99,255,0.08)');
 
@@ -748,30 +809,29 @@ function drawMobile(W, H) {
 
   ctx.restore();
 
-  // ========== SECTION 2: Top gauge ==========
+  // Top equation
   const selfRotTop = theta * radiusB / radiusA;
   const orbitalRotTop = theta;
   const totalRotTop = selfRotTop + orbitalRotTop;
-  const gaugeR = Math.min(40, sectionH * 0.28);
-  drawRotationGauge(cx, sec2Y + sectionH * 0.45, gaugeR, totalRotTop, selfRotTop, orbitalRotTop);
+  drawMobileEquation(cx, panelH - 28, selfRotTop, orbitalRotTop, totalRotTop);
 
   // ========== HORIZONTAL DIVIDER ==========
   ctx.beginPath();
   ctx.setLineDash([5, 5]);
-  ctx.moveTo(10, sec3Y);
-  ctx.lineTo(W - 10, sec3Y);
+  ctx.moveTo(10, panelH);
+  ctx.lineTo(W - 10, panelH);
   ctx.strokeStyle = '#333';
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // ========== SECTION 3: Circle A rolling on straight line ==========
+  // ========== BOTTOM PANEL: Circle A rolling on straight line ==========
   ctx.save();
   ctx.beginPath();
-  ctx.rect(0, sec3Y, W, sectionH);
+  ctx.rect(0, panelH, W, animH);
   ctx.clip();
 
-  const lineY = sec3Y + sectionH * 0.55;
+  const lineY = panelH + animH * 0.55;
   const lineStartX = cx - circumB / 2;
   const lineEndX = cx + circumB / 2;
   const linearDist = progress * circumB;
@@ -779,7 +839,7 @@ function drawMobile(W, H) {
   ctx.fillStyle = '#888';
   ctx.font = '11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(matchRotation ? 'Straight line (matching B rotation)' : 'Rolling along straight line (circ. of B)', cx, sec3Y + 13);
+  ctx.fillText(matchRotation ? 'Straight line (matching B rotation)' : 'Rolling along straight line (circ. of B)', cx, panelH + 13);
 
   if (matchRotation) {
     ctx.translate(cx, lineY);
@@ -850,12 +910,11 @@ function drawMobile(W, H) {
 
   ctx.restore();
 
-  // ========== SECTION 4: Bottom gauge ==========
+  // Bottom equation
   const selfRotBottom = aLinearRot;
   const orbitalRotBottom = matchRotation ? theta : 0;
   const totalRotBottom = selfRotBottom + orbitalRotBottom;
-  const gaugeRB = Math.min(40, sectionH * 0.28);
-  drawRotationGauge(cx, sec4Y + sectionH * 0.45, gaugeRB, totalRotBottom, selfRotBottom, orbitalRotBottom);
+  drawMobileEquation(cx, H - 28, selfRotBottom, orbitalRotBottom, totalRotBottom);
 }
 
 draw();
