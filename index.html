@@ -27,11 +27,47 @@
   }
   .controls label { font-size: 1.4rem; }
   input[type="range"] { accent-color: #6c63ff; }
-  #posSlider { width: 700px; height: 8px; accent-color: #00e676; }
+  #posSlider {
+    width: 700px;
+    height: 20px;
+    accent-color: #00e676;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+  }
+  #posSlider::-webkit-slider-runnable-track {
+    height: 14px;
+    background: #2a2a4a;
+    border-radius: 7px;
+    border: 1px solid #444;
+  }
+  #posSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #00e676;
+    margin-top: -6px;
+    cursor: pointer;
+  }
+  #posSlider::-moz-range-track {
+    height: 14px;
+    background: #2a2a4a;
+    border-radius: 7px;
+    border: 1px solid #444;
+  }
+  #posSlider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #00e676;
+    border: none;
+    cursor: pointer;
+  }
   .info {
     font-size: 1.1rem;
     color: #aaa;
-    margin-top: 6px;
     text-align: center;
   }
   canvas {
@@ -73,7 +109,7 @@
     .controls { margin-top: 4px; gap: 4px; }
     .controls label { font-size: 1rem; }
     #posSlider { width: 90vw; }
-    .info { font-size: 0.85rem; margin-top: 4px; }
+    .info { font-size: 0.85rem; }
     #matchBtn { padding: 7px 14px; font-size: 0.85rem; top: 6px; right: 8px; }
   }
 </style>
@@ -87,10 +123,10 @@
   <button id="matchBtn">Match Rotation: Off</button>
 </div>
 
-<div class="info" id="info"></div>
 <div class="controls">
-  <label>Position along B</label>
+  <div class="info" id="info"></div>
   <input type="range" id="posSlider" min="0" max="1000" step="1" value="0">
+  <label>Position along B</label>
 </div>
 
 <script>
