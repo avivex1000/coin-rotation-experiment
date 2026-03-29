@@ -513,11 +513,12 @@ function draw() {
   const tangentDirX = -Math.sin(theta - Math.PI / 2);
   const tangentDirY = Math.cos(theta - Math.PI / 2);
 
-  // Line starts at contact point (left end) and extends full circumference to the right
-  const tLineX1 = contactX;
-  const tLineY1 = contactY;
-  const tLineX2 = contactX + tangentDirX * circumB_val;
-  const tLineY2 = contactY + tangentDirY * circumB_val;
+  // Line slides left as A rolls: already-rolled part is left of contact, remaining is right
+  const coloredLen = progress * circumB_val;
+  const tLineX1 = contactX - tangentDirX * coloredLen;
+  const tLineY1 = contactY - tangentDirY * coloredLen;
+  const tLineX2 = contactX + tangentDirX * (circumB_val - coloredLen);
+  const tLineY2 = contactY + tangentDirY * (circumB_val - coloredLen);
 
   ctx.beginPath();
   ctx.moveTo(tLineX1, tLineY1);
@@ -526,12 +527,11 @@ function draw() {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Green portion: the part already rolled, growing from the left end
-  const coloredLen = progress * circumB_val;
+  // Green portion: the part already rolled, from left end to contact point
   if (coloredLen > 0.5) {
     ctx.beginPath();
     ctx.moveTo(tLineX1, tLineY1);
-    ctx.lineTo(tLineX1 + tangentDirX * coloredLen, tLineY1 + tangentDirY * coloredLen);
+    ctx.lineTo(contactX, contactY);
     ctx.strokeStyle = '#00e676';
     ctx.lineWidth = 4;
     ctx.stroke();
@@ -823,13 +823,14 @@ function drawMobile(W, H) {
   const contactX = cx + radiusB * Math.cos(theta - Math.PI / 2);
   const contactY = topCY + radiusB * Math.sin(theta - Math.PI / 2);
 
-  // Tangent line — starts at contact point, extends along tangent
+  // Tangent line — slides left as A rolls
   const tangentDirX = -Math.sin(theta - Math.PI / 2);
   const tangentDirY_t = Math.cos(theta - Math.PI / 2);
-  const tLineX1 = contactX;
-  const tLineY1 = contactY;
-  const tLineX2 = contactX + tangentDirX * circumB;
-  const tLineY2 = contactY + tangentDirY_t * circumB;
+  const coloredLen = progress * circumB;
+  const tLineX1 = contactX - tangentDirX * coloredLen;
+  const tLineY1 = contactY - tangentDirY_t * coloredLen;
+  const tLineX2 = contactX + tangentDirX * (circumB - coloredLen);
+  const tLineY2 = contactY + tangentDirY_t * (circumB - coloredLen);
 
   ctx.beginPath();
   ctx.moveTo(tLineX1, tLineY1);
@@ -838,11 +839,10 @@ function drawMobile(W, H) {
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  const coloredLen = progress * circumB;
   if (coloredLen > 0.5) {
     ctx.beginPath();
     ctx.moveTo(tLineX1, tLineY1);
-    ctx.lineTo(tLineX1 + tangentDirX * coloredLen, tLineY1 + tangentDirY_t * coloredLen);
+    ctx.lineTo(contactX, contactY);
     ctx.strokeStyle = '#00e676';
     ctx.lineWidth = 2.5;
     ctx.stroke();
