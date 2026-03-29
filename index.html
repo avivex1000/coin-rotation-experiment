@@ -172,17 +172,16 @@ const matchBtn = document.getElementById('matchBtn');
 const sizeSlider = document.getElementById('sizeSlider');
 const sizeVal = document.getElementById('sizeVal');
 
-const baseRadiusA = 80;
-const baseMult = 1;
-let radiusA = baseRadiusA;
-let multiplier = baseMult;
-let radiusB = radiusA * multiplier;
+const baseRadius = 80;
+let multiplier = 1;
+let radiusB = baseRadius;
+let radiusA = baseRadius / multiplier;
 let progress = 0;
 let matchRotation = false;
 
 sizeSlider.addEventListener('input', () => {
   multiplier = parseInt(sizeSlider.value);
-  radiusB = radiusA * multiplier;
+  radiusA = baseRadius / multiplier;
   sizeVal.textContent = multiplier + 'x';
   updateInfo();
   draw();
@@ -459,11 +458,11 @@ function draw() {
   // plus the epicycloid trace fit within ~W/2 wide, ~sectionH/2 tall
   if (mobile) {
     const maxR = Math.min(W * 0.13, H * 0.05);
-    radiusA = Math.max(20, Math.min(baseRadiusA, maxR));
-    radiusB = radiusA * multiplier;
+    radiusB = Math.max(20, Math.min(baseRadius, maxR));
+    radiusA = radiusB / multiplier;
   } else {
-    radiusA = baseRadiusA;
-    radiusB = radiusA * multiplier;
+    radiusB = baseRadius;
+    radiusA = baseRadius / multiplier;
   }
 
   if (mobile) {
