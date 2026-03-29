@@ -508,16 +508,16 @@ function draw() {
   const contactX = leftCX + radiusB * Math.cos(theta - Math.PI / 2);
   const contactY = leftCY + radiusB * Math.sin(theta - Math.PI / 2);
 
-  // Tangent line at contact
+  // Tangent line at contact — starts at contact point, extends along tangent
   const circumB_val = 2 * Math.PI * radiusB;
   const tangentDirX = -Math.sin(theta - Math.PI / 2);
   const tangentDirY = Math.cos(theta - Math.PI / 2);
-  const halfLen = circumB_val / 2;
 
-  const tLineX1 = contactX - tangentDirX * halfLen;
-  const tLineY1 = contactY - tangentDirY * halfLen;
-  const tLineX2 = contactX + tangentDirX * halfLen;
-  const tLineY2 = contactY + tangentDirY * halfLen;
+  // Line starts at contact point (left end) and extends full circumference to the right
+  const tLineX1 = contactX;
+  const tLineY1 = contactY;
+  const tLineX2 = contactX + tangentDirX * circumB_val;
+  const tLineY2 = contactY + tangentDirY * circumB_val;
 
   ctx.beginPath();
   ctx.moveTo(tLineX1, tLineY1);
@@ -526,6 +526,7 @@ function draw() {
   ctx.lineWidth = 2;
   ctx.stroke();
 
+  // Green portion: the part already rolled, growing from the left end
   const coloredLen = progress * circumB_val;
   if (coloredLen > 0.5) {
     ctx.beginPath();
@@ -822,14 +823,13 @@ function drawMobile(W, H) {
   const contactX = cx + radiusB * Math.cos(theta - Math.PI / 2);
   const contactY = topCY + radiusB * Math.sin(theta - Math.PI / 2);
 
-  // Tangent line
+  // Tangent line — starts at contact point, extends along tangent
   const tangentDirX = -Math.sin(theta - Math.PI / 2);
   const tangentDirY_t = Math.cos(theta - Math.PI / 2);
-  const halfLen = circumB / 2;
-  const tLineX1 = contactX - tangentDirX * halfLen;
-  const tLineY1 = contactY - tangentDirY_t * halfLen;
-  const tLineX2 = contactX + tangentDirX * halfLen;
-  const tLineY2 = contactY + tangentDirY_t * halfLen;
+  const tLineX1 = contactX;
+  const tLineY1 = contactY;
+  const tLineX2 = contactX + tangentDirX * circumB;
+  const tLineY2 = contactY + tangentDirY_t * circumB;
 
   ctx.beginPath();
   ctx.moveTo(tLineX1, tLineY1);
