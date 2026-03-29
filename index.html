@@ -376,10 +376,11 @@ function draw() {
 
   const mobile = isMobileLayout();
 
-  // Scale radii for mobile
+  // Scale radii for mobile — must be small enough that both circles
+  // plus the epicycloid trace fit within ~W/2 wide, ~sectionH/2 tall
   if (mobile) {
-    const maxR = Math.min(W * 0.22, H * 0.11);
-    radiusA = Math.max(30, Math.min(baseRadiusA, maxR));
+    const maxR = Math.min(W * 0.13, H * 0.05);
+    radiusA = Math.max(20, Math.min(baseRadiusA, maxR));
     radiusB = radiusA * baseMult;
   } else {
     radiusA = baseRadiusA;
@@ -639,66 +640,70 @@ function draw() {
 }
 
 function drawMobile(W, H) {
-  const halfH = H / 2;
-  const animW = W;
-  const animH_top = halfH * 0.6;
-  const gaugeH_top = halfH * 0.4;
+  // Divide canvas into 4 vertical sections: anim1, gauge1, anim2, gauge2
+  const sectionH = H / 4;
+  const sec1Y = 0;                // animation 1 (circular)
+  const sec2Y = sectionH;         // gauge 1
+  const sec3Y = sectionH * 2;     // animation 2 (linear)
+  const sec4Y = sectionH * 3;     // gauge 2
+  const cx = W / 2;
 
   const theta = progress * 2 * Math.PI;
   const circumB = 2 * Math.PI * radiusB;
 
-  // ========== TOP: Circle A rolling around Circle B ==========
+  // ========== SECTION 1: Circle A rolling around Circle B ==========
   ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, sec1Y, W, sectionH);
+  ctx.clip();
 
-  const topCX = animW / 2;
-  const topCY = animH_top * 0.55;
+  const topCY = sec1Y + sectionH * 0.5;
 
   ctx.fillStyle = '#888';
-  ctx.font = '12px sans-serif';
+  ctx.font = '11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Rolling around circle B', topCX, 14);
+  ctx.fillText('Rolling around circle B', cx, sec1Y + 13);
 
-  drawCircle(topCX, topCY, radiusB, '#6c63ff', 2, 'rgba(108,99,255,0.08)');
+  drawCircle(cx, topCY, radiusB, '#6c63ff', 1.5, 'rgba(108,99,255,0.08)');
 
   if (theta > 0.001) {
     ctx.beginPath();
-    ctx.arc(topCX, topCY, radiusB, -Math.PI / 2, -Math.PI / 2 + theta);
+    ctx.arc(cx, topCY, radiusB, -Math.PI / 2, -Math.PI / 2 + theta);
     ctx.strokeStyle = '#00e676';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
   }
 
   const dist = radiusB + radiusA;
-  const aCenterX = topCX + dist * Math.cos(theta - Math.PI / 2);
+  const aCenterX = cx + dist * Math.cos(theta - Math.PI / 2);
   const aCenterY = topCY + dist * Math.sin(theta - Math.PI / 2);
 
-  const contactX = topCX + radiusB * Math.cos(theta - Math.PI / 2);
+  const contactX = cx + radiusB * Math.cos(theta - Math.PI / 2);
   const contactY = topCY + radiusB * Math.sin(theta - Math.PI / 2);
 
-  const circumB_val = circumB;
+  // Tangent line
   const tangentDirX = -Math.sin(theta - Math.PI / 2);
-  const tangentDirY = Math.cos(theta - Math.PI / 2);
-  const halfLen = circumB_val / 2;
-
+  const tangentDirY_t = Math.cos(theta - Math.PI / 2);
+  const halfLen = circumB / 2;
   const tLineX1 = contactX - tangentDirX * halfLen;
-  const tLineY1 = contactY - tangentDirY * halfLen;
+  const tLineY1 = contactY - tangentDirY_t * halfLen;
   const tLineX2 = contactX + tangentDirX * halfLen;
-  const tLineY2 = contactY + tangentDirY * halfLen;
+  const tLineY2 = contactY + tangentDirY_t * halfLen;
 
   ctx.beginPath();
   ctx.moveTo(tLineX1, tLineY1);
   ctx.lineTo(tLineX2, tLineY2);
   ctx.strokeStyle = 'rgba(108,99,255,0.3)';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  const coloredLen = progress * circumB_val;
+  const coloredLen = progress * circumB;
   if (coloredLen > 0.5) {
     ctx.beginPath();
     ctx.moveTo(tLineX1, tLineY1);
-    ctx.lineTo(tLineX1 + tangentDirX * coloredLen, tLineY1 + tangentDirY * coloredLen);
+    ctx.lineTo(tLineX1 + tangentDirX * coloredLen, tLineY1 + tangentDirY_t * coloredLen);
     ctx.strokeStyle = '#00e676';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
   }
 
@@ -706,31 +711,31 @@ function drawMobile(W, H) {
   const tracePointX = aCenterX + radiusA * Math.cos(Math.PI / 2 + aRotation);
   const tracePointY = aCenterY + radiusA * Math.sin(Math.PI / 2 + aRotation);
 
-  const traceTop = computeTraceCircular(topCX, topCY, progress);
+  const traceTop = computeTraceCircular(cx, topCY, progress);
   drawTrace(traceTop, 'rgba(255,107,107,0.7)');
 
-  drawCircle(aCenterX, aCenterY, radiusA, '#ff6b6b', 2, 'rgba(255,107,107,0.12)');
+  drawCircle(aCenterX, aCenterY, radiusA, '#ff6b6b', 1.5, 'rgba(255,107,107,0.12)');
   drawMarker(aCenterX, aCenterY, radiusA, Math.PI / 2 + aRotation, '#ff6b6b');
 
   const selfRotA = theta * radiusB / radiusA;
   if (selfRotA > 0.001) {
-    const contactAngle = Math.PI / 2 + aRotation;
+    const cAngle = Math.PI / 2 + aRotation;
     ctx.beginPath();
-    ctx.arc(aCenterX, aCenterY, radiusA, contactAngle - selfRotA, contactAngle);
+    ctx.arc(aCenterX, aCenterY, radiusA, cAngle - selfRotA, cAngle);
     ctx.strokeStyle = '#00e676';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
   }
 
-  drawDot(tracePointX, tracePointY, 3, '#ff6b6b');
-  drawDot(topCX, topCY, 3, '#6c63ff');
-  drawDot(contactX, contactY, 3, '#00e676');
+  drawDot(tracePointX, tracePointY, 2.5, '#ff6b6b');
+  drawDot(cx, topCY, 2.5, '#6c63ff');
+  drawDot(contactX, contactY, 2.5, '#00e676');
 
-  drawRotatedLabel(topCX, topCY, 0, 'B', 'rgba(108,99,255,0.6)', Math.round(radiusB * 0.45));
-  drawRotatedLabel(aCenterX, aCenterY, aRotation, 'A', 'rgba(255,107,107,0.6)', Math.round(radiusA * 0.45));
+  drawRotatedLabel(cx, topCY, 0, 'B', 'rgba(108,99,255,0.6)', Math.round(radiusB * 0.4));
+  drawRotatedLabel(aCenterX, aCenterY, aRotation, 'A', 'rgba(255,107,107,0.6)', Math.round(radiusA * 0.4));
 
-  const bLabelSize = Math.round(radiusA * 0.3);
-  const tangentAngle = Math.atan2(tangentDirY, tangentDirX);
+  const bLabelSize = Math.round(radiusA * 0.28);
+  const tangentAngle = Math.atan2(tangentDirY_t, tangentDirX);
   ctx.save();
   ctx.translate(tLineX2, tLineY2);
   ctx.rotate(tangentAngle);
@@ -738,65 +743,59 @@ function drawMobile(W, H) {
   ctx.font = `bold ${bLabelSize}px sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'bottom';
-  ctx.fillText('B', 3, -3);
+  ctx.fillText('B', 2, -2);
   ctx.restore();
 
-  // Top gauge
+  ctx.restore();
+
+  // ========== SECTION 2: Top gauge ==========
   const selfRotTop = theta * radiusB / radiusA;
   const orbitalRotTop = theta;
   const totalRotTop = selfRotTop + orbitalRotTop;
-  const gaugeR = Math.min(50, gaugeH_top * 0.30);
-  const gaugeTY = animH_top + gaugeH_top * 0.4;
-
-  drawRotationGauge(topCX, gaugeTY, gaugeR, totalRotTop, selfRotTop, orbitalRotTop);
-
-  ctx.restore();
+  const gaugeR = Math.min(40, sectionH * 0.28);
+  drawRotationGauge(cx, sec2Y + sectionH * 0.45, gaugeR, totalRotTop, selfRotTop, orbitalRotTop);
 
   // ========== HORIZONTAL DIVIDER ==========
   ctx.beginPath();
   ctx.setLineDash([5, 5]);
-  ctx.moveTo(10, halfH);
-  ctx.lineTo(W - 10, halfH);
+  ctx.moveTo(10, sec3Y);
+  ctx.lineTo(W - 10, sec3Y);
   ctx.strokeStyle = '#333';
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // ========== BOTTOM: Circle A rolling on straight line ==========
-  const bottomAnimH = halfH * 0.6;
-  const bottomGaugeH = halfH * 0.4;
-
+  // ========== SECTION 3: Circle A rolling on straight line ==========
   ctx.save();
   ctx.beginPath();
-  ctx.rect(0, halfH, W, halfH);
+  ctx.rect(0, sec3Y, W, sectionH);
   ctx.clip();
 
-  const botCX = W / 2;
-  const lineY = halfH + bottomAnimH * 0.55;
-  const lineStartX = botCX - circumB / 2;
-  const lineEndX = botCX + circumB / 2;
+  const lineY = sec3Y + sectionH * 0.55;
+  const lineStartX = cx - circumB / 2;
+  const lineEndX = cx + circumB / 2;
   const linearDist = progress * circumB;
 
   ctx.fillStyle = '#888';
-  ctx.font = '12px sans-serif';
+  ctx.font = '11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(matchRotation ? 'Rolling along straight line (matching B rotation)' : 'Rolling along straight line (circumference of B)', botCX, halfH + 14);
+  ctx.fillText(matchRotation ? 'Straight line (matching B rotation)' : 'Rolling along straight line (circ. of B)', cx, sec3Y + 13);
 
   if (matchRotation) {
-    ctx.translate(botCX, lineY);
+    ctx.translate(cx, lineY);
     ctx.rotate(theta);
-    ctx.translate(-botCX, -lineY);
+    ctx.translate(-cx, -lineY);
   }
 
   if (matchRotation) {
-    drawDot(botCX, lineY, 4, '#6c63ff');
+    drawDot(cx, lineY, 3, '#6c63ff');
   }
 
   ctx.beginPath();
   ctx.moveTo(lineStartX, lineY);
   ctx.lineTo(lineEndX, lineY);
   ctx.strokeStyle = '#6c63ff';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
   if (linearDist > 0.5) {
@@ -804,15 +803,15 @@ function drawMobile(W, H) {
     ctx.moveTo(lineStartX, lineY);
     ctx.lineTo(lineStartX + linearDist, lineY);
     ctx.strokeStyle = '#00e676';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
   }
 
   for (let i = 0; i <= multiplier; i++) {
     const tx = lineStartX + (i / multiplier) * circumB;
     ctx.beginPath();
-    ctx.moveTo(tx, lineY - 5);
-    ctx.lineTo(tx, lineY + 5);
+    ctx.moveTo(tx, lineY - 4);
+    ctx.lineTo(tx, lineY + 4);
     ctx.strokeStyle = '#6c63ff';
     ctx.lineWidth = 1.5;
     ctx.stroke();
@@ -828,7 +827,7 @@ function drawMobile(W, H) {
   const traceBottom = computeTraceLinear(lineStartX, lineY, circumB, progress);
   drawTrace(traceBottom, 'rgba(255,107,107,0.7)');
 
-  drawCircle(aLinearCX, aLinearCY, radiusA, '#ff6b6b', 2, 'rgba(255,107,107,0.12)');
+  drawCircle(aLinearCX, aLinearCY, radiusA, '#ff6b6b', 1.5, 'rgba(255,107,107,0.12)');
   drawMarker(aLinearCX, aLinearCY, radiusA, Math.PI / 2 + aLinearRot, '#ff6b6b');
 
   if (aLinearRot > 0.001) {
@@ -836,31 +835,27 @@ function drawMobile(W, H) {
     ctx.beginPath();
     ctx.arc(aLinearCX, aLinearCY, radiusA, contactAngleL - aLinearRot, contactAngleL);
     ctx.strokeStyle = '#00e676';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
   }
 
-  drawDot(traceBX, traceBY, 3, '#ff6b6b');
+  drawDot(traceBX, traceBY, 2.5, '#ff6b6b');
 
-  drawRotatedLabel(aLinearCX, aLinearCY, aLinearRot, 'A', 'rgba(255,107,107,0.6)', Math.round(radiusA * 0.45));
+  drawRotatedLabel(aLinearCX, aLinearCY, aLinearRot, 'A', 'rgba(255,107,107,0.6)', Math.round(radiusA * 0.4));
   ctx.fillStyle = 'rgba(108,99,255,0.8)';
-  ctx.font = `bold ${Math.round(radiusA * 0.3)}px sans-serif`;
+  ctx.font = `bold ${Math.round(radiusA * 0.28)}px sans-serif`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'bottom';
-  ctx.fillText('B', lineEndX + 3, lineY - 3);
+  ctx.fillText('B', lineEndX + 2, lineY - 2);
 
   ctx.restore();
 
-  // Bottom gauge (outside clip)
-  ctx.save();
+  // ========== SECTION 4: Bottom gauge ==========
   const selfRotBottom = aLinearRot;
   const orbitalRotBottom = matchRotation ? theta : 0;
   const totalRotBottom = selfRotBottom + orbitalRotBottom;
-  const gaugeRB = Math.min(50, bottomGaugeH * 0.30);
-  const gaugeBY = halfH + bottomAnimH + bottomGaugeH * 0.4;
-
-  drawRotationGauge(botCX, gaugeBY, gaugeRB, totalRotBottom, selfRotBottom, orbitalRotBottom);
-  ctx.restore();
+  const gaugeRB = Math.min(40, sectionH * 0.28);
+  drawRotationGauge(cx, sec4Y + sectionH * 0.45, gaugeRB, totalRotBottom, selfRotBottom, orbitalRotBottom);
 }
 
 draw();
