@@ -214,9 +214,11 @@ posSlider.addEventListener('input', () => {
   draw();
 });
 
+function fmt(n) { return parseFloat(n.toFixed(2)); }
+
 function updateInfo() {
-  const circumB = (2 * Math.PI * radiusB).toFixed(0);
-  infoEl.textContent = `Circle A radius: ${radiusA}  |  Circle B radius: ${radiusB}  |  Circumference B: ${circumB}`;
+  const circumB = fmt(2 * Math.PI * radiusB);
+  infoEl.textContent = `Circle A radius: ${fmt(radiusA)}  |  Circle B radius: ${fmt(radiusB)}  |  Circumference B: ${circumB}`;
 }
 updateInfo();
 
