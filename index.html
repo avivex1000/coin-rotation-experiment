@@ -17,12 +17,12 @@
     padding: 12px 20px;
     overflow: hidden;
   }
-  h1 { font-size: 1.8rem; margin-bottom: 8px; color: #eee; }
+  h1 { font-size: 1.8rem; margin-bottom: 0; color: #eee; }
   .controls {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 10px;
+    margin-top: 6px;
     gap: 6px;
   }
   .controls label { font-size: 1.4rem; }
@@ -31,7 +31,7 @@
   .info {
     font-size: 1.1rem;
     color: #aaa;
-    margin-bottom: 8px;
+    margin-top: 6px;
     text-align: center;
   }
   canvas {
@@ -70,10 +70,10 @@
   @media (max-width: 700px) {
     body { padding: 8px 8px; }
     h1 { font-size: 1.1rem; margin-bottom: 4px; }
-    .controls { margin-bottom: 6px; gap: 4px; }
+    .controls { margin-top: 4px; gap: 4px; }
     .controls label { font-size: 1rem; }
     #posSlider { width: 90vw; }
-    .info { font-size: 0.85rem; margin-bottom: 4px; }
+    .info { font-size: 0.85rem; margin-top: 4px; }
     #matchBtn { padding: 7px 14px; font-size: 0.85rem; top: 6px; right: 8px; }
   }
 </style>
@@ -82,15 +82,15 @@
 
 <h1>Circle Rolling: Curve vs Straight Line</h1>
 
-<div class="controls">
-  <label>Position along B</label>
-  <input type="range" id="posSlider" min="0" max="1000" step="1" value="0">
-</div>
-<div class="info" id="info"></div>
-
 <div class="canvas-wrap">
   <canvas id="canvas"></canvas>
   <button id="matchBtn">Match Rotation: Off</button>
+</div>
+
+<div class="info" id="info"></div>
+<div class="controls">
+  <label>Position along B</label>
+  <input type="range" id="posSlider" min="0" max="1000" step="1" value="0">
 </div>
 
 <script>
